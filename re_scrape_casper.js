@@ -3,52 +3,53 @@ var casper = require('casper').create();
 
 
 function getProps(){
-	var page_props = [];
-
-	var buttons = document.querySelectorAll('.SearchPropMore');
-	console.log(buttons.length);
-	return Array.prototype.map.call(buttons, function(e){
-		var patt = /Prop=([^=]+)/g;
-		// console.log(e.href);
-		if (patt.test(e.href))
-		// console.log(prop);
-			return e.href;
-	});
+    var buttons = document.querySelectorAll('.SearchPropMore');
+    return Array.prototype.map.call(buttons, function(e){
+        var patt = /Prop=([^=]+)/g;
+        if (patt.test(e.href)){
+            return e.href;
+        }
+    });
 }
 function get_current_count(){
-	return document.getElementById("ctl00_ContentPlaceHolder1_ItemNumberFrom").innerHTML;
+    return document.getElementById("ctl00_ContentPlaceHolder1_ItemNumberFrom").innerHTML;
 }
 function getPropsAndWrite(){
-	var current_count = casper.evaluate(get_current_count);
-	// casper.echo(current_count);
-    var props = casper.evaluate(getProps);
+    // get current pagination number
+    var current_count = casper.evaluate(get_current_count);
 
+    // output all property urls found on this page
+    var props = casper.evaluate(getProps);
     content = props.join("\n");
     casper.echo(content);
 
+    // try to navigate to the next page
     var nextLink = "#ctl00_ContentPlaceHolder1_BtnNext";
     if (casper.visible(nextLink)) {
 
         casper.thenClick(nextLink, function(){
-        	// console.log("Clicked Next Button!");
+            // console.log("Clicked Next Button!");
         });
 
+        // wait until javascript actually loads the new page
         casper.waitFor(function() {
-        	return current_count != casper.evaluate(get_current_count);
+            return current_count != casper.evaluate(get_current_count);
         },null);
 
+        // continue recursively
         casper.then(getPropsAndWrite);
-    } else {
+    }
+    else {
+        // no next link found so we've reached the end of the listing
         casper.echo("END")
     }
 }
 
-casper.start(url);
 
 // casper.on('remote.message', function(msg) {
 //     this.echo('remote message caught: ' + msg);
 // })
 
+casper.start(url);
 casper.then(getPropsAndWrite);
-
 casper.run();
